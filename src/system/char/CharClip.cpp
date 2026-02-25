@@ -657,13 +657,10 @@ void CharClip::LockAndDelete(CharClip **list, int remaining, int count) {
             i--;
             list[i] = list[remaining];
             list[remaining] = clip + -1;
-
-        } else {
-            i = i;
         }
     }
     if (count > 0) {
-            
+
             if (count != 0) {
                 do {
                     list[--remaining]->mPlayFlags |= 0x10000;
