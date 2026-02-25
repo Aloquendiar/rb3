@@ -645,10 +645,54 @@ void CharClip::MakeMRU() {
     }
 }
 
-void CharClip::LockAndDelete(CharClip **, int remaining, int) {
-    MILO_ASSERT(remaining >= 0, 0x43A);
-}
+void CharClip::LockAndDelete(CharClip **list, int remaining, int count) {
+    MILO_ASSERT(count >= 0, 0x43A);
+    if (remaining < count) {
+        count = remaining;
+    }
+    for (int i = 0; i < remaining; i++) {
+        CharClip* clip = list[i];
+        if (clip->mPlayFlags & 0x10000) {
+            remaining--;
+            i--;
+            list[i] = list[remaining];
+            list[remaining] = clip + -1;
 
+        } else {
+            i = i;
+        }
+    }
+    if (count > 0) {
+            
+            if (count != 0) {
+                do {
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                    list[--remaining]->mPlayFlags |= 0x10000;
+                } while (count != 0);
+                count = count & 7; 
+                if (count == 0) goto LAB_END_UNROLL; 
+            }
+            do {
+                //remaining--;
+                list[remaining]->mPlayFlags |= 0x10000;
+                count--;
+            } while (count != 0);
+        }
+    LAB_END_UNROLL:
+    while (0 < remaining) {
+        remaining--;
+        CharClip* clip = list[remaining];
+        if (clip) {
+            delete clip; 
+        }
+    }
+}
 void CharClip::PreSave(BinStream &) { MILO_WARN("You can only save a CharClip from PC"); }
 
 void CharClip::PostSave(BinStream &) {}
