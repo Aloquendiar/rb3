@@ -41,8 +41,9 @@ int EC_Shutdown() {
         try {
             ec::dumpMemInfo();
             status = ec::op->shutDown();
-            if (status == ECResult_Success && (status = ec::shutdown(), status == ECResult_Success)) {
-                ec::op->~ECAsyncOpEnv();
+            if (status == ECResult_Success && 
+                (status = ec::shutdown(), status == ECResult_Success)) {
+                delete ec::op;
                 ec::op = NULL;
             }
             ec::dumpMemInfo();
@@ -67,7 +68,7 @@ int EC_SetParameter(const char *paramId, const char *value) {
         try {
             ec::op->lock();
             status = ECResult_Success;
-            int cmp = strncmp(paramId, "TIN", 4);
+            int cmp = strncmp(paramId, "TIN", 4); //TIN for CAS?
             if (cmp == 0) {
                 if (value == NULL) {
                     ec::op->m_TIN = "";
@@ -75,7 +76,7 @@ int EC_SetParameter(const char *paramId, const char *value) {
                     ec::op->m_TIN = value;
                 }
             } else {
-                cmp = strncmp(paramId, "AppId", 6);
+                cmp = strncmp(paramId, "AppId", 6); //AppId for CAS?
                 if (cmp == 0) {
                     if (value == NULL) {
                         ec::op->m_AppId = "";
@@ -99,7 +100,7 @@ int EC_SetParameter(const char *paramId, const char *value) {
                                 ec::isUseNCRs = (true - (value == 0));
                             }
                         } else {
-                            cmp = strncmp(paramId, "SPAVE_CHECK_POLICY", 19);
+                            cmp = strncmp(paramId, "SPACE_CHECK_POLICY", 19);
                             if (cmp == 0) {
                                 if (value == NULL) {
                                     status = ECResult_InvalidBufHeap;
@@ -135,7 +136,7 @@ int EC_SetParameter(const char *paramId, const char *value) {
     return status;
 }
 
-int EC_GetProgress(unsigned long p1, ECResult *p2) {
+ECResult EC_GetProgress(unsigned long p1, ECResult *p2) {
     ECResult status;
     if (ec::op == NULL) {
         if (p2 != NULL) {
@@ -152,7 +153,7 @@ int EC_GetProgress(unsigned long p1, ECResult *p2) {
             if (pOpThread == NULL) {
                 p2[6] = ECResult_NotBusy;
                 *p2 = ECResult_NotBusy;
-            } else if (p1 == 0 || p1 != pOpThread->osThread.context.gprs[1]) {
+            } else if (p1 == 0 || (long)p1 != (s32)(pOpThread->osThread.context.gprs[1])) {
                 p2[6] = ECResult_NotActive;
                 *p2 = ECResult_NotActive;
             } else {
@@ -165,28 +166,19 @@ int EC_GetProgress(unsigned long p1, ECResult *p2) {
                 p2[4] = (ECResult)pOpThread->osThread.context.gprs[12];
                 p2[5] = (ECResult)pOpThread->osThread.context.gprs[13];
                 p2[6] = (ECResult)pOpThread->osThread.context.gprs[14];
-                int iVar5 = 16;
                 unsigned long *puVar1;
                 unsigned long result;
                 //TODO: do something about this
-                do {
-                    puVar1++;
-                    puVar2 += 2;
-                    result = *puVar2;
-                    pEVar3[1] = *puVar1;
-                    pEVar3 += 2;
-                    *pEVar3 = result;
-                    iVar5--;
-                } while (iVar5 != 0);
+                pEVar3 = puVar2;
                 result = ec::getExternalErrCode((ECProgress *)(ec::op->opThread->osThread.context.gprs + 8));
                 p2[6] = (ECResult)result;
             }
             status = *p2;
         } catch (std::exception) {
-            ec::logmsg(ECLogLevel_Error, "Caught exception at  FILE: ec_api.cpp  LINE: %d  COMPILED: Feb  8 2010  20:10:32 \n", 0x38); //0x38 should be __LINE__
+            ec::logmsg(ECLogLevel_Error, "Caught exception at  FILE: ec_api.cpp  LINE: %d  COMPILED: Feb  8 2010  20:10:32 \n", 0xc9); //0xc9 should be __LINE__
             status = ECResult_NoMemory;
         } catch (std::bad_alloc) {
-            ec::logmsg(ECLogLevel_Error, "Caught bad_alloc exception at  FILE: ec_api.cpp  LINE: %d  COMPILED: Feb  8 2010  20:10:32 \n", 0x38); //0x38 should be __LINE__
+            ec::logmsg(ECLogLevel_Error, "Caught bad_alloc exception at  FILE: ec_api.cpp  LINE: %d  COMPILED: Feb  8 2010  20:10:32 \n", 0xc9); //0xc9 should be __LINE__
             status = ECResult_ECFail;
         }
         ec::op->unlockProgress();
@@ -195,7 +187,7 @@ int EC_GetProgress(unsigned long p1, ECResult *p2) {
 }
 
 //TODO: Work on this function
-int EC_CancelOperation(unsigned long param_1) {
+int EC_CancelOperation(unsigned long opId) {
     ECResult status;
     _SHRThread *p_Var1;
 
@@ -207,7 +199,7 @@ int EC_CancelOperation(unsigned long param_1) {
         p_Var1 = ec::op->opThread;
         if (p_Var1 == NULL) {
             status = ECResult_NotBusy;
-        } else if (param_1 == 0 && param_1 != p_Var1->osThread.context.gprs[1]) {
+        } else if (opId == 0 && opId != p_Var1->osThread.context.gprs[1]) {
             status = ECResult_NotActive;
             if (p_Var1->osThread.context.gprs[8] == ECResult_NotBusy) {
                 status = ECResult_NotBusy;

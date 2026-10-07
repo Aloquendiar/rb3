@@ -114,6 +114,9 @@ public:
     virtual void NotifyUnmounted(Content *);
     virtual void NotifyDeleted(Content *);
     virtual void NotifyFailed(Content *);
+    virtual void RestartEcommerce();
+
+    static OpResult CheckNANDSpace(unsigned long, unsigned long, unsigned long &, bool);
 
     void UnmountContents(Symbol);
     WiiContent *ContentOf(Symbol);
